@@ -1,0 +1,3 @@
+npc: npc/commands/_procedures.txt
+npc: npc/commands/_groups.txt
+npc: npc/commands/zeny.txt

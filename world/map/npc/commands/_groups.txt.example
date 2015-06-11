@@ -1,0 +1,30 @@
+-|script|groups|32767
+{
+    end;
+
+OnPCLoginEvent:
+    // here we convert legacy GM levels to GM groups
+    // NOTE: DO NOT EDIT UNLESS YOU KNOW WHAT YOU ARE DOING
+    //if (GM ==  0) set #GM, G_PLAYER; // normal player, default group
+    if (GM ==  1) set #GM, G_BOT;    // given to authorized bots, to bypass some limits
+    if (GM == 20) set #GM, G_TESTER; // official testers (should not be used on production server)
+    if (GM == 40) set #GM, G_DEV;    // content creator, debugger
+    if (GM == 50) set #GM, G_EVENT;  // event coordinator
+    if (GM == 60) set #GM, G_GM;     // game master
+    if (GM == 80) set #GM, G_ADMIN;  // admin, greater dev, anyone with push access to the repos
+    if (GM == 98) set #GM, G_SYSOP;  // special TMWA-only gm level that is not sent to other clients (hidden sysadmin), can use ALL commands
+    if (GM == 99) set #GM, G_SYSOP;  // sysadmin, anyone that has access to the vps and domain names, can use ALL commands
+    end;
+
+OnInit:
+    /////////////////////////////////////////////////////
+    // NOTE: Feel free to edit below this line
+    // G_SYSOP is always implied
+
+    // define permissions here
+    set .zeny, G_ADMIN;
+
+    // permissions for events
+    set .killthegm, G_EVENT | G_GM;
+    end;
+}
