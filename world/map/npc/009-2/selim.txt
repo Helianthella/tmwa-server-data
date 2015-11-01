@@ -40,34 +40,34 @@ L_ask_dye:
         "Good bye.", L_Close;
 
 L_clothes_choice:
-    cleararray @items$, "", getarraysize(@items$);
-    cleararray @item_names$, "", getarraysize(@item_names$);
-    set @r, 0;
-    set @j, getarraysize($@DYE_items$);
-    goto L_CloneArray; // clone the array from DyeConfig
-
-L_CloneArray:
-    set @items$[@r],      $@DYE_items$[@r];
-    set @item_names$[@r], $@DYE_item_names$[@r];
-    set @r, @r + 1;
-    if(@r < @j) goto L_CloneArray;
-    set @r, 0;
-    set @j, 0;
-    goto L_clothes_choice2;
-
-L_clothes_choice2:
+    npcaction 9; // clear dialog window
     mes "[Selim]";
     mes "\"What can I dye for you today?\"";
     next;
-    callfunc "DynamicItemMenu$";
-    set @default_choice$, "";
-    set @item_del$, @item$;
-    set @name$, @item_names$[@index];
-    cleararray @items$, "", getarraysize(@items$);
-    cleararray @item_names$, "", getarraysize(@item_names$);
-    if(@item$ == "") goto L_Close;
-    goto L_picked_item;
+    mes "%%B ##3Drag and drop an item from your inventory to the box below.##0";
+    requestitem .@item$[0];
+    if (.@item$[0] == "") goto L_Sorry;
+    set .@c, 0;
+    set .@m, getarraysize(.colors$);
+    goto L_CheckColor;
 
+L_CheckColor:
+    // make sure this item can be dyed in all colors
+    if (getitemlink(.colors$[.@c] + .@item$[0]) == "Unknown Item") goto L_Sorry;
+    set .@c, .@c + 1;
+    if (.@c < .@m) goto L_CheckColor;
+    setarray @selim$[0], .@item$[0];
+    goto L_colour;
+
+L_Sorry:
+    setarray @selim$[0], ""; // just in case
+    mes "[Selim]";
+    mes "\"Sorry, I can not dye this item.";
+    mes "Would you like to try again?\"";
+    next;
+    menu
+        "Yes", L_clothes_choice,
+        "Never mind.", L_Close;
 
 L_asksorcererrobe:
     mes "[Selim]";
@@ -88,46 +88,27 @@ L_Next:
     mes "[Selim]";
     mes "\"Of course I can help you by dyeing the materials your tailor will want.";
     mes "All I need is a piece of Cotton Cloth.\"";
-    set @item_del$, "CottonCloth";
-    set @name$, "Cotton Cloth";
+    if (countitem("CottonCloth") > 0) setarray @selim$[0], "CottonCloth";
     menu
-        "Sure. Here is one.", L_picked_item,
+        "Sure. Here is one.", L_colour,
         "I have to go pick that.", L_Close;
 
-L_picked_item:
-    if (countitem(@item_del$) == 0) goto L_havenone;
-    goto L_colour;
-
 L_colour:
+    npcaction 9; // clear dialog window
     mes "[Selim]";
     mes "\"Excellent. Now, what color do you want?\"";
     next;
-    set @r, 0;
-    set @j, getarraysize($@DYE_colors$);
-    cleararray @items$, "", getarraysize(@items$);
-    cleararray @item_names$, "", getarraysize(@item_names$);
-    callsub S_CloneColors;
-    set @default_choice$, "I have no dye.";
-    callfunc "DynamicItemMenu$";
-    cleararray @items$, "", getarraysize(@items$);
-    cleararray @item_names$, "", getarraysize(@item_names$);
-    set @default_choice$, "";
-    if (@item$ == "") goto L_no_dye;
-    set @colour, @index;
+    mes "%%B ##3Drag and drop a dye from your inventory to the box below.##0";
+    requestitem .@dye$;
+    if (.@dye$ == "") goto L_no_dye;
+    set .@index, array_search(.@dye$[0], .dyes$);
+    if (.@index < 0) goto L_no_dye;
+    setarray @selim$[1], .@dye$[0], .colors$[.@index];
     goto L_finish;
-
-S_CloneColors:
-    set @items$[@r],      $@DYE_colors$[@r] + "Dye";
-    set @item_names$[@r], $@DYE_color_names$[@r];
-    set @r, @r + 1;
-    if(@r < @j) goto S_CloneColors;
-    set @r, 0;
-    set @j, 0;
-    return;
 
 L_no_dye:
     mes "[Selim]";
-    mes "\"I would love to dye your " + @name$ + " for you, but you will have to bring me some dye first.";
+    mes "\"I would love to dye your " + getitemlink(@selim$[0]) + " for you, but you will have to bring me some dye first.";
     mes "Those behind me are nearly empty and won't last for your item.\"";
     next;
     menu
@@ -145,25 +126,32 @@ L_explain_dye:
     goto L_Close;
 
 L_finish:
-    if(getitemlink($@DYE_colors$[@colour] + @item_del$) == "Unknown Item") mapexit;
-    if(countitem(@item_del$) < 1) goto L_havenone;
-    delitem @item$, 1;
-    delitem @item_del$, 1;
-    getitem $@DYE_colors$[@colour] + @item_del$, 1;
+    debugmes "`"+@selim$[0]+"`, `"+@selim$[1]+"`, `"+@selim$[2]+"`";
+    set .@i$, @selim$[2] + @selim$[0];
+    if (getitemlink(.@i$) == "Unknown Item") goto L_Sorry;
+    if (countitem(@selim$[1]) > 0) delitem @selim$[1], 1;
+    else goto L_Cheat;
+    if (countitem(@selim$[0]) > 0) delitem @selim$[0], 1;
+    else goto L_Cheat;
+    getitem .@i$, 1;
     mes "[Selim]";
-    mes "\"Here's your " + $@DYE_color_names$[@colour] + " " + @name$ + "!  Please let dry for a minute.\"";
+    mes "\"Here's your " + getitemlink(.@i$) + "!  Please let dry for a minute.\"";
     goto L_Close;
 
-L_havenone:
+L_Cheat:
     mes "[Selim]";
-    mes "\"You don't have any uncolored " + @name$ + "?  That's unfortunate.";
-    mes "Would you like to dye something else?\"";
+    mes "\"Don't try to cheat me!\"";
     next;
-    goto L_clothes_choice;
+    goto L_Close;
 
 L_Close:
     mes "\"Farewell and good luck in your journeys!\"";
     close2;
     emotion EMOTE_WINK, strcharinfo(0);
+    end;
+
+OnInit:
+    setarray .colors$, "Red", "Green", "DarkBlue", "Yellow", "LightBlue", "Pink", "Black", "Orange", "Purple", "DarkGreen";
+    setarray .dyes$, "RedDye", "GreenDye", "DarkBlueDye", "YellowDye", "LightBlueDye", "PinkDye", "BlackDye", "OrangeDye", "PurpleDye", "DarkGreenDye";
     end;
 }
